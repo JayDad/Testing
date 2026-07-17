@@ -20,8 +20,10 @@ import time
 from pims_client import PimsError, build_client_from_env, setup_logging
 
 # 흔한 페이징 관례들 (작은 결과부터 요청해 DB 부하를 줄이는 게 목적)
+# 이 PIMS 는 Omega 365 기반이라 Omega 네이티브 파라미터(maxRecords)를 맨 앞에 둡니다.
 PARAM_SETS = [
-    {"size": 1},
+    {"maxRecords": 1},              # Omega 365 네이티브 (가장 유력)
+    {"maxRecords": 1, "skip": 0},
     {"pageSize": 1},
     {"page": 1, "pageSize": 1},
     {"limit": 1},
@@ -29,6 +31,7 @@ PARAM_SETS = [
     {"$top": 1},
     {"$top": 1, "$skip": 0},
     {"top": 1},
+    {"take": 1},
     {"rows": 1},
     {"maxResults": 1},
 ]
