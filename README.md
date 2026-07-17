@@ -26,13 +26,22 @@ cp .env.example .env
 
 | 방식 | 설정할 값 | 실제로 붙는 헤더 |
 | --- | --- | --- |
+| `basic` (기본) | `PIMS_USERNAME`, `PIMS_PASSWORD` | `Authorization: Basic base64(id:pw)` |
 | `bearer` | `PIMS_API_TOKEN` | `Authorization: Bearer <token>` |
 | `apikey` | `PIMS_API_KEY`, `PIMS_API_KEY_HEADER` | `<header>: <key>` (기본 `x-api-key`) |
-| `basic` | `PIMS_USERNAME`, `PIMS_PASSWORD` | `Authorization: Basic base64(id:pw)` |
 
-> ⚠️ 예전 REST API 문서에는 엔드포인트 URL만 있고 인증 방식이 명시돼 있지 않습니다.
-> PIMS 발급처에 **정확한 인증 방식(토큰 종류/헤더명)** 을 확인한 뒤 `.env` 값만 맞추면 됩니다.
-> 기본값은 `bearer` 입니다.
+PIMS 발급처에서 안내받은 방식에 맞춰 `.env` 의 `PIMS_AUTH_SCHEME` 만 바꾸면 됩니다.
+예를 들어 **Basic 인증**을 안내받았다면:
+
+```dotenv
+PIMS_AUTH_SCHEME=basic
+PIMS_USERNAME=발급받은_아이디
+PIMS_PASSWORD=발급받은_비밀번호
+```
+
+> ⚠️ `PIMS_API_TOKEN`/`PIMS_API_KEY` 에 예제의 placeholder 나 한글이 남아 있으면
+> HTTP 헤더 인코딩 오류(`UnicodeEncodeError`)가 납니다. 사용하지 않는 방식의 값은
+> 비워두거나 그대로 둬도 되지만, **실제 사용하는 방식**의 값은 반드시 채우세요.
 
 ## 설치 & 실행
 

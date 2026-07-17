@@ -9,3 +9,7 @@ venv/
 env/
 *.egg-info/
 .pytest_cache/
+
+# 실행 시 생성되는 로그/결과
+pims.log
+output/
