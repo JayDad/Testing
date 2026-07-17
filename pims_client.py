@@ -25,11 +25,35 @@ PIMS 발급처에서 정확한 방식(헤더명/토큰 종류)을 확인한 뒤 
 from __future__ import annotations
 
 import base64
+import logging
 import os
 from pathlib import Path
 from typing import Any, Optional
 
 import requests
+
+# 이 모듈에서 사용하는 로거. setup_logging() 을 호출하면 콘솔+파일로 출력됩니다.
+logger = logging.getLogger("pims")
+
+
+def setup_logging(logfile: str | os.PathLike[str] = "pims.log", level: int = logging.INFO) -> None:
+    """콘솔과 파일 양쪽으로 로그를 남기도록 설정합니다.
+
+    호출 후에는 모든 요청/응답이 `logfile` 에 기록됩니다.
+    """
+    fmt = logging.Formatter("%(asctime)s %(levelname)-5s %(name)s | %(message)s")
+
+    console = logging.StreamHandler()
+    console.setFormatter(fmt)
+
+    file_handler = logging.FileHandler(logfile, encoding="utf-8")
+    file_handler.setFormatter(fmt)
+
+    root = logging.getLogger("pims")
+    root.setLevel(level)
+    root.handlers.clear()          # 중복 등록 방지
+    root.addHandler(console)
+    root.addHandler(file_handler)
 
 
 # ---------------------------------------------------------------------------
@@ -105,16 +129,36 @@ class PimsClient:
     # ------------------------------------------------------------------
     # 인증 헤더 — 인증이 적용되는 "단 한 곳"
     # ------------------------------------------------------------------
+    @staticmethod
+    def _check_header_value(value: str, env_name: str) -> str:
+        """헤더에 들어갈 값이 유효한지 검증합니다.
+
+        HTTP 헤더 값은 latin-1 로 인코딩 가능해야 합니다. 한글 등 비ASCII 문자가
+        들어있으면(예: .env 의 placeholder 를 실제 값으로 안 바꾼 경우) urllib3 가
+        `UnicodeEncodeError` 를 내는데, 그 전에 여기서 명확한 메시지로 잡아줍니다.
+        """
+        try:
+            value.encode("latin-1")
+        except UnicodeEncodeError:
+            raise PimsError(
+                f"{env_name} 값에 한글 등 비ASCII 문자가 들어있습니다. "
+                f".env 의 {env_name} 에 예제 placeholder 대신 발급받은 실제 값을 "
+                f"넣었는지 확인하세요. (현재 값 앞부분: {value[:12]!r}...)"
+            )
+        return value
+
     def _auth_headers(self) -> dict[str, str]:
         """설정된 인증 방식에 맞는 헤더를 만듭니다."""
         if self.auth_scheme == "bearer":
             if not self.token:
                 raise PimsError("PIMS_API_TOKEN 이 설정되지 않았습니다 (bearer 방식).")
+            self._check_header_value(self.token, "PIMS_API_TOKEN")
             return {"Authorization": f"Bearer {self.token}"}
 
         if self.auth_scheme == "apikey":
             if not self.api_key:
                 raise PimsError("PIMS_API_KEY 가 설정되지 않았습니다 (apikey 방식).")
+            self._check_header_value(self.api_key, "PIMS_API_KEY")
             return {self.api_key_header: self.api_key}
 
         if self.auth_scheme == "basic":
@@ -141,7 +185,12 @@ class PimsClient:
         json: Optional[Any] = None,
     ) -> Any:
         url = f"{self.base_url}/{path.lstrip('/')}"
-        headers = self._auth_headers()
+        logger.info("→ %s %s params=%s", method, url, params or {})
+        try:
+            headers = self._auth_headers()
+        except PimsError as exc:
+            logger.error("✗ 인증 설정 오류: %s", exc)
+            raise
         try:
             resp = self.session.request(
                 method,
@@ -153,9 +202,12 @@ class PimsClient:
                 verify=self.verify_ssl,
             )
         except requests.RequestException as exc:  # 네트워크/연결 오류
+            logger.error("✗ %s %s 요청 실패: %s", method, url, exc)
             raise PimsError(f"요청 실패: {method} {url} ({exc})") from exc
 
+        logger.info("← %s %s HTTP %s (%d bytes)", method, url, resp.status_code, len(resp.content))
         if not resp.ok:
+            logger.error("✗ HTTP %s 응답 본문: %s", resp.status_code, resp.text[:500])
             raise PimsError(
                 f"{method} {url} -> HTTP {resp.status_code}",
                 status_code=resp.status_code,
@@ -230,3 +282,57 @@ def build_client_from_env(dotenv_path: str = ".env") -> PimsClient:
     """.env 를 로드한 뒤 환경변수 기반으로 클라이언트를 만듭니다."""
     load_dotenv(dotenv_path)
     return PimsClient()
+
+
+# ---------------------------------------------------------------------------
+# CLI — `python pims_client.py <리소스>` 로 바로 조회할 수 있습니다.
+#   예) python pims_client.py tags -p page=1 -p size=20
+# ---------------------------------------------------------------------------
+def _main(argv: Optional[list[str]] = None) -> int:
+    import argparse
+    import json as _json
+    import sys
+
+    parser = argparse.ArgumentParser(description="PIMS REST API 조회 CLI")
+    parser.add_argument(
+        "resource",
+        nargs="?",
+        choices=["tags", "subsystems", "tagevents", "itr", "punchitems"],
+        help="조회할 리소스 (itr = tagevents)",
+    )
+    parser.add_argument(
+        "-p", "--param",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help="쿼리 파라미터 (여러 번 사용 가능). 예: -p page=1 -p size=20",
+    )
+    args = parser.parse_args(argv)
+
+    if not args.resource:
+        parser.print_help()
+        print("\n예) python pims_client.py tags -p page=1 -p size=20")
+        return 0
+
+    setup_logging()
+    client = build_client_from_env()
+
+    params: dict[str, Any] = {}
+    for kv in args.param:
+        key, _, value = kv.partition("=")
+        params[key] = value
+
+    resource = "tagevents" if args.resource == "itr" else args.resource
+    try:
+        data = client.list(resource, **params)
+        print(_json.dumps(data, ensure_ascii=False, indent=2))
+        return 0
+    except PimsError as exc:
+        print(f"[PIMS 오류] {exc}", file=sys.stderr)
+        if exc.body:
+            print(exc.body[:500], file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(_main())
