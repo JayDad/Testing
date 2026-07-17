@@ -107,8 +107,9 @@ class PimsClient:
         api_key_header: Optional[str] = None,
         username: Optional[str] = None,
         password: Optional[str] = None,
-        timeout: float = 30.0,
-        verify_ssl: bool = True,
+        timeout: Optional[float] = None,
+        proxy: Optional[str] = None,
+        verify_ssl: Optional[bool] = None,
     ) -> None:
         # 값이 명시되지 않으면 환경변수에서 읽습니다.
         self.base_url = (base_url or os.getenv("PIMS_BASE_URL", "https://gate-api.pimshosting.com")).rstrip("/")
@@ -118,8 +119,18 @@ class PimsClient:
         self.api_key_header = api_key_header or os.getenv("PIMS_API_KEY_HEADER", "x-api-key")
         self.username = username or os.getenv("PIMS_USERNAME")
         self.password = password or os.getenv("PIMS_PASSWORD")
-        self.timeout = timeout
+
+        # 타임아웃: 기본 60초. (connect, read) 튜플로 분리 적용.
+        self.timeout = timeout if timeout is not None else float(os.getenv("PIMS_TIMEOUT", "60"))
+
+        # SSL 검증: 기본 True. 사내 프록시가 자체 인증서를 쓰면 PIMS_VERIFY_SSL=false 로 끌 수 있음.
+        if verify_ssl is None:
+            verify_ssl = os.getenv("PIMS_VERIFY_SSL", "true").lower() not in ("false", "0", "no")
         self.verify_ssl = verify_ssl
+
+        # 프록시: 사내망에서 외부로 나갈 때 필요. 예) http://proxy.company.com:8080
+        proxy = proxy or os.getenv("PIMS_PROXY") or os.getenv("HTTPS_PROXY") or os.getenv("https_proxy")
+        self.proxies = {"http": proxy, "https": proxy} if proxy else None
 
         self.session = requests.Session()
         self.session.headers.update(
@@ -191,6 +202,8 @@ class PimsClient:
         except PimsError as exc:
             logger.error("✗ 인증 설정 오류: %s", exc)
             raise
+        # (connect, read) 분리: 연결은 빨리(10s) 끊어 차단 여부를 빨리 판단, 응답은 넉넉히 대기.
+        req_timeout = (min(self.timeout, 10.0), self.timeout)
         try:
             resp = self.session.request(
                 method,
@@ -198,10 +211,34 @@ class PimsClient:
                 params=params,
                 json=json,
                 headers=headers,
-                timeout=self.timeout,
+                timeout=req_timeout,
                 verify=self.verify_ssl,
+                proxies=self.proxies,
             )
-        except requests.RequestException as exc:  # 네트워크/연결 오류
+        except requests.exceptions.ConnectTimeout as exc:
+            logger.error("✗ %s %s 연결 시간초과: %s", method, url, exc)
+            raise PimsError(
+                f"연결 실패(ConnectTimeout): {url}\n"
+                f"  → 서버까지 TCP 연결 자체가 안 됩니다. 방화벽 차단 / VPN 미접속 / 프록시 미설정 가능성이 높습니다."
+            ) from exc
+        except requests.exceptions.ReadTimeout as exc:
+            logger.error("✗ %s %s 응답 시간초과: %s", method, url, exc)
+            raise PimsError(
+                f"응답 시간초과(ReadTimeout): {url}\n"
+                f"  → 연결은 됐지만 서버가 {self.timeout:.0f}초 내에 응답을 주지 않았습니다.\n"
+                f"     프록시가 요청을 가로채 멈췄거나(사내망 차단), 서버가 느릴 수 있습니다.\n"
+                f"     PIMS_PROXY 설정 또는 PIMS_TIMEOUT 증가를 시도해 보세요."
+            ) from exc
+        except requests.exceptions.ProxyError as exc:
+            logger.error("✗ %s %s 프록시 오류: %s", method, url, exc)
+            raise PimsError(f"프록시 오류: {url}\n  → PIMS_PROXY 주소를 확인하세요. ({exc})") from exc
+        except requests.exceptions.SSLError as exc:
+            logger.error("✗ %s %s SSL 오류: %s", method, url, exc)
+            raise PimsError(
+                f"SSL 인증서 오류: {url}\n"
+                f"  → 사내 프록시가 자체 인증서를 쓰는 경우입니다. PIMS_VERIFY_SSL=false 로 임시 우회 가능. ({exc})"
+            ) from exc
+        except requests.RequestException as exc:  # 그 외 네트워크/연결 오류
             logger.error("✗ %s %s 요청 실패: %s", method, url, exc)
             raise PimsError(f"요청 실패: {method} {url} ({exc})") from exc
 
