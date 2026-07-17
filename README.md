@@ -51,6 +51,26 @@ cp .env.example .env      # 인증 정보 입력
 python example_usage.py
 ```
 
+## 조회 파라미터 (중요)
+
+이 API는 Omega 365 기반이라 페이징/필터 파라미터가 정해져 있습니다:
+
+| 파라미터 | 의미 | 예 |
+| --- | --- | --- |
+| `maxRecords` | 가져올 최대 개수 | `maxRecords=50` |
+| `skip` | 건너뛸 개수(offset) | `skip=100` |
+| `whereClause` | SQL 필터 | `whereClause=Domain='0202'` |
+
+> ⚠️ **`maxRecords`를 반드시 지정하세요.** 예를 들어 tags 는 10만건(`_total`=101,553)이라,
+> 개수 제한 없이 조회하면 서버가 전체를 스캔하다 **500(DB 타임아웃)** 이 납니다.
+> (`pageSize`/`limit`/`$top` 같은 다른 이름은 이 API가 무시합니다.)
+
+응답은 **HAL 형식**입니다:
+```json
+{ "_total": 101553, "_items": [ { ... }, ... ], "_links": { "next": { "href": "..." } } }
+```
+실제 데이터는 `_items`, 전체 건수는 `_total`. `PimsClient.items(resp)` / `PimsClient.total(resp)` 로 꺼냅니다.
+
 ## 사용 예
 
 ```python
@@ -58,17 +78,34 @@ from pims_client import build_client_from_env
 
 client = build_client_from_env()   # .env 자동 로드
 
-# 조회 (필터/페이징은 키워드 인자로)
-tags = client.get_tags(page=1, size=20)
-itrs = client.get_itrs()           # ITR = tagevents
-punch = client.get_punchitems()
+# 조회 — 반드시 개수 제한
+resp = client.get_tags(max_records=50)
+print(client.total(resp))          # 전체 건수
+for tag in client.items(resp):     # 실제 데이터 목록
+    print(tag)
 
-# 저장 (필드명은 PIMS 스키마에 맞게)
-client.create_tag({
-    "tagNo": "10-PT-1001",
-    "description": "Pressure Transmitter",
-    "subsystem": "SS-100",
-})
+# 필터 조회 (whereClause) — 컬럼명은 output/tags.json 에서 확인 후 사용
+resp = client.get_tags(max_records=100, where="Domain='0202'")
+
+# 전체 페이지 순회 (제너레이터) — 반드시 where 로 좁혀서!
+for tag in client.iter_all("tags", page_size=1000, where="Domain='0202'"):
+    ...
+
+itrs = client.get_itrs(max_records=50)      # ITR = tagevents
+punch = client.get_punchitems(max_records=50)
+
+# 단건 조회 (단수형 경로 /cms/tag/{id})
+one = client.get_tag("0202_C&E")
+
+# 저장 (필드명은 output/*.json 을 보고 맞추세요)
+client.create_tag({"TagNo": "10-PT-1001", "Description": "Pressure Transmitter"})
+```
+
+CLI 로도 바로 조회할 수 있습니다:
+```bash
+python pims_client.py tags -n 10                       # 10건 조회
+python pims_client.py tags -n 50 --where "Domain='0202'"
+python pims_client.py tags --total                     # 전체 건수만
 ```
 
 코드로 직접 인증값을 넘기고 싶다면:
@@ -84,8 +121,20 @@ client = PimsClient(
 )
 ```
 
+## 파라미터 탐색기 (probe.py)
+
+문서에 없는 파라미터를 찾을 때 씁니다. 실제로 이걸로 `maxRecords` 를 찾아냈습니다.
+```bash
+python probe.py tags          # 여러 페이징 관례를 시도해 동작하는 것을 찾음
+python probe.py subsystems
+```
+
 ## 참고
 
-- 이 코드가 만들어진 환경에서는 네트워크 정책상 `gate-api.pimshosting.com` 접속이
-  차단되어 있어, **실제 API 응답 스키마(필드명/파라미터명)는 검증하지 못했습니다.**
-  조회 결과를 한번 출력해 보고 필드명을 실제 스키마에 맞춰 조정하세요.
+- 이 시스템은 **Omega 365** 플랫폼 기반 PIMS 입니다.
+- 조회 파라미터(`maxRecords`/`skip`/`whereClause`)와 HAL 응답 형식은 **실제 호출로 검증**됐습니다.
+- 각 리소스의 **필드명**(예: tags 의 `Domain`, `TagNo` 등)은 `output/*.json` 을 열어 확인한 뒤
+  `whereClause` 필터나 저장 payload 에 사용하세요.
+- **성능**: tags 는 10만건 이상이고 요청 1건당 ~30초가 걸립니다. 전체를 받기보다
+  `whereClause` 로 범위를 좁혀 쓰는 것을 강력히 권장합니다.
+- **사내망**: 외부(`gate-api.pimshosting.com`) 접속이 막히면 `.env` 에 `PIMS_PROXY` 를 설정하세요.

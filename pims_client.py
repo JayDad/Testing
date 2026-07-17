@@ -90,11 +90,21 @@ class PimsClient:
     """PIMS CMS REST API 클라이언트."""
 
     # 문서에 나온 리소스 경로 (base_url 뒤에 붙습니다)
+    # 목록(복수형) 경로
     RESOURCES = {
         "tags": "cms/tags",
         "subsystems": "cms/subsystems",
         "tagevents": "cms/tagevents",   # ITR
         "punchitems": "cms/punchitems",
+    }
+
+    # 단건(단수형) 경로 — 이 API 는 단건 조회에 단수형을 씁니다. 예) /cms/tag/{id}
+    # (tag 는 응답의 self 링크로 확인됨, 나머지는 동일 규칙으로 추정)
+    ITEM_PATHS = {
+        "tags": "cms/tag",
+        "subsystems": "cms/subsystem",
+        "tagevents": "cms/tagevent",
+        "punchitems": "cms/punchitem",
     }
 
     def __init__(
@@ -267,13 +277,80 @@ class PimsClient:
         # 이미 경로(cms/xxx)를 직접 넘긴 경우도 허용
         return resource
 
-    def list(self, resource: str, **params: Any) -> Any:
-        """리소스 목록 조회 (GET). 필터/페이징은 키워드 인자로 전달."""
+    # 이 API(Omega 365 기반)의 조회 파라미터:
+    #   maxRecords  : 가져올 최대 개수 (없으면 서버가 전체 스캔 → 타임아웃 위험!)
+    #   skip        : 건너뛸 개수(offset)
+    #   whereClause : SQL 필터 (예: "Domain='0202'")
+    def list(
+        self,
+        resource: str,
+        *,
+        max_records: Optional[int] = None,
+        skip: Optional[int] = None,
+        where: Optional[str] = None,
+        **params: Any,
+    ) -> Any:
+        """리소스 목록 조회 (GET). HAL 형식({_total, _items, _links})을 그대로 반환.
+
+        max_records / skip / where 는 이 API 전용 파라미터(maxRecords/skip/whereClause)로
+        변환되어 전달됩니다. 그 외 파라미터는 키워드로 자유롭게 추가할 수 있습니다.
+        실제 데이터 목록만 필요하면 PimsClient.items(응답) 을 쓰세요.
+        """
+        if max_records is not None:
+            params["maxRecords"] = max_records
+        if skip is not None:
+            params["skip"] = skip
+        if where is not None:
+            params["whereClause"] = where
         return self._request("GET", self._resolve(resource), params=params or None)
 
     def get(self, resource: str, item_id: str | int) -> Any:
-        """단건 조회 (GET /resource/{id})."""
-        return self._request("GET", f"{self._resolve(resource)}/{item_id}")
+        """단건 조회. 이 API 는 단수형 경로를 씁니다. 예) /cms/tag/{id}"""
+        from urllib.parse import quote
+
+        base = self._resolve(resource)
+        singular = self.ITEM_PATHS.get(resource, base[:-1] if base.endswith("s") else base)
+        return self._request("GET", f"{singular}/{quote(str(item_id), safe='')}")
+
+    # ------------------------------------------------------------------
+    # HAL 응답 헬퍼 / 페이지네이션
+    # ------------------------------------------------------------------
+    @staticmethod
+    def items(response: Any) -> list:
+        """HAL 응답에서 실제 데이터 목록(_items)만 꺼냅니다."""
+        if isinstance(response, dict):
+            return response.get("_items", [])
+        return response if isinstance(response, list) else []
+
+    @staticmethod
+    def total(response: Any) -> Optional[int]:
+        """HAL 응답의 전체 건수(_total)."""
+        return response.get("_total") if isinstance(response, dict) else None
+
+    def iter_all(
+        self,
+        resource: str,
+        *,
+        page_size: int = 1000,
+        where: Optional[str] = None,
+        max_pages: int = 100_000,
+    ):
+        """모든 페이지를 순회하며 항목을 하나씩 내보냅니다(제너레이터).
+
+        ⚠️ tags 처럼 수십만 건인 리소스를 통째로 받으면 매우 오래 걸립니다
+        (요청 1건당 ~30초). 되도록 where 로 범위를 좁혀서 쓰세요.
+        """
+        skip = 0
+        for _ in range(max_pages):
+            resp = self.list(resource, max_records=page_size, skip=skip, where=where)
+            batch = self.items(resp)
+            if not batch:
+                break
+            for item in batch:
+                yield item
+            if len(batch) < page_size:
+                break
+            skip += page_size
 
     def create(self, resource: str, payload: dict[str, Any] | list[Any]) -> Any:
         """저장 (POST). payload 는 dict 또는 list."""
@@ -286,30 +363,34 @@ class PimsClient:
     # ------------------------------------------------------------------
     # 리소스별 편의 메서드
     # ------------------------------------------------------------------
+    # 편의 메서드들: 기본 max_records=50 으로 안전하게 조회 (미지정 시 서버 타임아웃 방지)
     # Tags
-    def get_tags(self, **params: Any) -> Any:
-        return self.list("tags", **params)
+    def get_tags(self, *, max_records: int = 50, skip: int = 0, where: Optional[str] = None, **params: Any) -> Any:
+        return self.list("tags", max_records=max_records, skip=skip, where=where, **params)
+
+    def get_tag(self, tag_id: str) -> Any:
+        return self.get("tags", tag_id)
 
     def create_tag(self, payload: dict[str, Any]) -> Any:
         return self.create("tags", payload)
 
     # SubSystems
-    def get_subsystems(self, **params: Any) -> Any:
-        return self.list("subsystems", **params)
+    def get_subsystems(self, *, max_records: int = 50, skip: int = 0, where: Optional[str] = None, **params: Any) -> Any:
+        return self.list("subsystems", max_records=max_records, skip=skip, where=where, **params)
 
     def create_subsystem(self, payload: dict[str, Any]) -> Any:
         return self.create("subsystems", payload)
 
     # ITR (TagEvents)
-    def get_itrs(self, **params: Any) -> Any:
-        return self.list("tagevents", **params)
+    def get_itrs(self, *, max_records: int = 50, skip: int = 0, where: Optional[str] = None, **params: Any) -> Any:
+        return self.list("tagevents", max_records=max_records, skip=skip, where=where, **params)
 
     def create_itr(self, payload: dict[str, Any]) -> Any:
         return self.create("tagevents", payload)
 
     # Punch Items
-    def get_punchitems(self, **params: Any) -> Any:
-        return self.list("punchitems", **params)
+    def get_punchitems(self, *, max_records: int = 50, skip: int = 0, where: Optional[str] = None, **params: Any) -> Any:
+        return self.list("punchitems", max_records=max_records, skip=skip, where=where, **params)
 
     def create_punchitem(self, payload: dict[str, Any]) -> Any:
         return self.create("punchitems", payload)
@@ -323,7 +404,8 @@ def build_client_from_env(dotenv_path: str = ".env") -> PimsClient:
 
 # ---------------------------------------------------------------------------
 # CLI — `python pims_client.py <리소스>` 로 바로 조회할 수 있습니다.
-#   예) python pims_client.py tags -p page=1 -p size=20
+#   예) python pims_client.py tags -n 10
+#       python pims_client.py tags -n 50 --where "Domain='0202'"
 # ---------------------------------------------------------------------------
 def _main(argv: Optional[list[str]] = None) -> int:
     import argparse
@@ -337,18 +419,23 @@ def _main(argv: Optional[list[str]] = None) -> int:
         choices=["tags", "subsystems", "tagevents", "itr", "punchitems"],
         help="조회할 리소스 (itr = tagevents)",
     )
+    parser.add_argument("-n", "--max-records", type=int, default=10, help="가져올 최대 개수 (기본 10)")
+    parser.add_argument("-s", "--skip", type=int, default=0, help="건너뛸 개수 (offset)")
+    parser.add_argument("-w", "--where", default=None, help="SQL 필터. 예: \"Domain='0202'\"")
     parser.add_argument(
         "-p", "--param",
         action="append",
         default=[],
         metavar="KEY=VALUE",
-        help="쿼리 파라미터 (여러 번 사용 가능). 예: -p page=1 -p size=20",
+        help="추가 쿼리 파라미터 (여러 번 사용 가능).",
     )
+    parser.add_argument("--total", action="store_true", help="_total(전체 건수)만 출력")
     args = parser.parse_args(argv)
 
     if not args.resource:
         parser.print_help()
-        print("\n예) python pims_client.py tags -p page=1 -p size=20")
+        print("\n예) python pims_client.py tags -n 10")
+        print("    python pims_client.py tags -n 50 --where \"Domain='0202'\"")
         return 0
 
     setup_logging()
@@ -361,8 +448,14 @@ def _main(argv: Optional[list[str]] = None) -> int:
 
     resource = "tagevents" if args.resource == "itr" else args.resource
     try:
-        data = client.list(resource, **params)
-        print(_json.dumps(data, ensure_ascii=False, indent=2))
+        data = client.list(
+            resource, max_records=args.max_records, skip=args.skip, where=args.where, **params
+        )
+        if args.total:
+            print(f"_total = {client.total(data)}")
+        else:
+            print(f"_total = {client.total(data)} (표시: {len(client.items(data))}건)")
+            print(_json.dumps(data, ensure_ascii=False, indent=2))
         return 0
     except PimsError as exc:
         print(f"[PIMS 오류] {exc}", file=sys.stderr)
