@@ -1,0 +1,97 @@
+# 테스트 장면 — 배경 애니메이션 슬라이드 제작 방식 5개 계열 → 권고 3개 경로
+# 장면은 직전 장면을 상속: 바뀐 키만 적으면 됨 (id가 같으면 모핑 대상)
+
+meta:
+  project_title: "AX · Motion Slide Test"
+  logo: null              # 로고 파일 경로 지정 시 우측 상단 삽입, 미지정 시 비움
+  hold: 3.0               # 장면 정지 시간(초)
+  morph: 1.2              # 장면 간 모핑 시간(초)
+  intro: 0.8              # 첫 장면 페이드인(초)
+  fps: 30
+
+scenes:
+  # ── 장면 1 · 5개 계열 카드 ─────────────────────────────────────
+  - title: "배경 애니메이션 슬라이드 제작 방식"
+    subtitle: "5개 계열 개관"
+    elements:
+      - {id: c1, style: card, x: 0.60, y: 1.95, w: 2.23, h: 3.75, lines: &c1 [
+          {t: "01", size: 32, bold: true, color: navy, gap: 12},
+          {t: "슬라이드 전환형", size: 19, bold: true, color: navy, gap: 14},
+          {t: "PowerPoint 모핑 · Keynote Magic Move", size: 14, gap: 10},
+          {t: "같은 개체의 위치·크기·색 변화 자동 보간", size: 14, color: caption}]}
+      - {id: c2, style: card, x: 3.08, y: 1.95, w: 2.23, h: 3.75, lines: [
+          {t: "02", size: 32, bold: true, color: navy, gap: 12},
+          {t: "모션그래픽 툴", size: 19, bold: true, color: navy, gap: 14},
+          {t: "After Effects + 템플릿", size: 14, gap: 10},
+          {t: "최고 품질, 숙련·유료 부담", size: 14, color: caption}]}
+      - {id: c3, style: card, x: 5.55, y: 1.95, w: 2.23, h: 3.75, lines: [
+          {t: "03", size: 32, bold: true, color: navy, gap: 12},
+          {t: "코드 기반", size: 19, bold: true, color: navy, gap: 14},
+          {t: "HyperFrames · Remotion · Manim", size: 14, gap: 10},
+          {t: "장면 코드 → 프레임 렌더링 → MP4", size: 14, color: caption}]}
+      - {id: c4, style: card, x: 8.03, y: 1.95, w: 2.23, h: 3.75, lines: [
+          {t: "04", size: 32, bold: true, color: navy, gap: 12},
+          {t: "AI 디자인 도구", size: 19, bold: true, color: navy, gap: 14},
+          {t: "Claude Design · Claude Code + 스킬", size: 14, gap: 10},
+          {t: "자연어 지시 → AI가 모션 코드 작성", size: 14, color: caption}]}
+      - {id: c5, style: card, x: 10.50, y: 1.95, w: 2.23, h: 3.75, lines: [
+          {t: "05", size: 32, bold: true, color: navy, gap: 12},
+          {t: "AI 생성형", size: 19, bold: true, color: navy, gap: 14},
+          {t: "NotebookLM · Kling · Veo · Vrew", size: 14, gap: 10},
+          {t: "최단 시간, 세부 통제 낮음", size: 14, color: caption}]}
+      - {id: banner, style: banner, x: 0.60, y: 5.95, w: 12.13, h: 0.70, size: 15, bold: true,
+         text: "2026년 흐름  ·  AI가 코드로 모션 작성 → MP4 렌더링 방식 확산"}
+    notes: "5개 계열 개관 — 다음 장면부터 ③·④ 상세"
+
+  # ── 장면 2 · ③ 코드 기반 확대 (나머지는 좌측 칩으로 축소) ─────────
+  - subtitle: "③ 코드 기반 · 장면을 코드로 정의해 MP4 렌더링"
+    title: "배경 애니메이션 슬라이드 제작 방식"
+    remove: [banner]
+    elements:
+      - {id: c1, x: 0.60, y: 1.95, w: 3.30, h: 0.85, anchor: middle, lines: [{t: "01  슬라이드 전환형", size: 15, bold: true, color: navy}]}
+      - {id: c2, x: 0.60, y: 2.95, w: 3.30, h: 0.85, anchor: middle, lines: [{t: "02  모션그래픽 툴", size: 15, bold: true, color: navy}]}
+      - {id: c4, x: 0.60, y: 3.95, w: 3.30, h: 0.85, anchor: middle, lines: [{t: "04  AI 디자인 도구", size: 15, bold: true, color: navy}]}
+      - {id: c5, x: 0.60, y: 4.95, w: 3.30, h: 0.85, anchor: middle, lines: [{t: "05  AI 생성형", size: 15, bold: true, color: navy}]}
+      - {id: c3, x: 4.15, y: 1.95, w: 8.58, h: 4.85, pad: 0.45, anchor: top, lines: [
+          {t: "03", size: 54, bold: true, color: navy, gap: 4},
+          {t: "코드 기반", size: 32, bold: true, color: navy, gap: 6},
+          {t: "HyperFrames(HTML) · Remotion(React) · Motion Canvas(TS) · Manim(Python)", size: 15, color: caption, gap: 30},
+          {t: "작동 원리  ·  장면을 코드로 정의 → 프레임 단위 렌더링 → MP4", size: 19, gap: 14},
+          {t: "강점  ·  재현성, 일괄 생성, 데이터 연동", size: 19, gap: 14},
+          {t: "제약  ·  개발 환경 필요, Remotion은 4인 이상 기업 유료 라이선스", size: 19}]}
+
+  # ── 장면 3 · ④ AI 디자인 도구로 초점 이동 ───────────────────────
+  - subtitle: "④ AI 디자인 도구 · 자연어 지시로 모션 코드 작성"
+    elements:
+      - {id: c3, x: 0.60, y: 3.95, w: 3.30, h: 0.85, pad: 0.25, anchor: middle, lines: [{t: "03  코드 기반", size: 15, bold: true, color: navy}]}
+      - {id: c4, x: 4.15, y: 1.95, w: 8.58, h: 4.85, pad: 0.45, anchor: top, lines: [
+          {t: "04", size: 54, bold: true, color: navy, gap: 4},
+          {t: "AI 디자인 도구", size: 32, bold: true, color: navy, gap: 6},
+          {t: "Claude Design(Animation) · Claude Code + HyperFrames·Remotion 스킬", size: 15, color: caption, gap: 30},
+          {t: "작동 원리  ·  자연어 지시 → AI가 코드 작성 → 대화로 수정", size: 19, gap: 14},
+          {t: "강점  ·  비전문가 제작 가능, 디자인 시스템으로 브랜드 일관성", size: 19, gap: 14},
+          {t: "제약  ·  사용량 한도, 외부 처리(자료 등급 게이트 적용)", size: 19}]}
+
+  # ── 장면 4 · 권고 3개 경로로 재배치 (②·⑤ 퇴장) ─────────────────
+  - title: "사업본부 적용 권고(안)"
+    subtitle: "용도별 3개 경로"
+    remove: [c2, c5]
+    hold: 3.5
+    elements:
+      - {id: c1, x: 0.60, y: 1.95, w: 3.84, h: 3.75, pad: 0.30, anchor: top, lines: [
+          {t: "사내 보고·교육", size: 15, bold: true, color: caption, gap: 10},
+          {t: "PowerPoint 모핑 → MP4", size: 26, bold: true, color: navy, gap: 24},
+          {t: "사내 PC 로컬 처리", size: 17, gap: 10},
+          {t: "다크블루 장표 재사용", size: 17}]}
+      - {id: c4, x: 4.75, y: 1.95, w: 3.84, h: 3.75, pad: 0.30, anchor: top, lines: [
+          {t: "공개 가능 콘텐츠", size: 15, bold: true, color: caption, gap: 10},
+          {t: "Claude Design Animation", size: 26, bold: true, color: navy, gap: 24},
+          {t: "대화형 수정", size: 17, gap: 10},
+          {t: "디자인 시스템 등록 시 브랜드 일관성", size: 17}]}
+      - {id: c3, x: 8.89, y: 1.95, w: 3.84, h: 3.75, pad: 0.30, anchor: top, lines: [
+          {t: "반복 제작", size: 15, bold: true, color: caption, gap: 10},
+          {t: "Claude Code + 코드 렌더링", size: 26, bold: true, color: navy, gap: 24},
+          {t: "기존 HTML 자산 재활용", size: 17, gap: 10},
+          {t: "무료 라이선스, 재현성 확보", size: 17}]}
+      - {id: banner, style: banner, x: 0.60, y: 5.95, w: 12.13, h: 0.70, size: 15, bold: true,
+         text: "비권고  ·  Remotion 상용 사용, 외부 생성형 도구에 사내 자료 투입"}

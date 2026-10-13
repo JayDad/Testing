@@ -1,0 +1,65 @@
+# ─────────────────────────────────────────────────────────────────────
+# Motion Slide 템플릿 — 복사 후 문구·좌표만 수정
+#   python build.py --new 이름   → specs/이름.yaml 생성
+#   python build.py specs/이름.yaml --qa
+#
+# 규칙 5개
+#  1) 단위: 좌표 inch(16:9 = 13.333 × 7.5), 글자 pt
+#  2) 콘텐츠 영역: x 0.60 ~ 12.73 / y 1.95 ~ 6.90 (상단 제목·구분선·페이지번호는 자동)
+#  3) 같은 id = 같은 개체 → 장면 사이 위치·크기·색이 모핑으로 이동
+#  4) 장면은 직전 장면 상속: 바뀐 키만 기재 / 퇴장은 remove: [id] / 전체 초기화는 reset: true
+#  5) style 프리셋: text · card · navycard · highlight · banner · bar
+#
+# 자주 쓰는 배치 (y 1.95 시작, 배너는 y 5.95 h 0.70)
+#  - 3열 카드: w 3.84, x 0.60 / 4.75 / 8.89
+#  - 4열 카드: w 2.81, x 0.60 / 3.71 / 6.82 / 9.92
+#  - 5열 카드: w 2.23, x 0.60 / 3.08 / 5.55 / 8.03 / 10.50
+#  - 좌측 칩 + 우측 확대 패널: 칩 x 0.60 w 3.30 h 0.85 (y 1.95/2.95/3.95/4.95),
+#                              패널 x 4.15 y 1.95 w 8.58 h 4.85
+#  - 전체 폭 배너: x 0.60 w 12.13
+# ─────────────────────────────────────────────────────────────────────
+
+meta:
+  project_title: "프로젝트명 · 보고명"
+  logo: null          # 예: assets/logo.png (미지정 시 우측 상단 비움)
+  hold: 3.0           # 장면 정지(초)
+  morph: 1.2          # 장면 전환 모핑(초)
+  intro: 0.8          # 첫 장면 페이드인(초)
+  fps: 30
+  page_numbers: true  # 영상 배경 전용이면 false 권장
+
+scenes:
+  # 장면 1 — 3개 카드 등장
+  - title: "핵심 이슈 3건"
+    subtitle: "현황 요약"
+    elements:
+      - {id: a, style: card, x: 0.60, y: 1.95, w: 3.84, h: 3.75, lines: [
+          {t: "01", size: 32, bold: true, color: navy, gap: 12},
+          {t: "이슈 A", size: 22, bold: true, color: navy, gap: 14},
+          {t: "설명 문구 1", size: 16, gap: 8},
+          {t: "보조 설명", size: 15, color: caption}]}
+      - {id: b, style: card, x: 4.75, y: 1.95, w: 3.84, h: 3.75, lines: [
+          {t: "02", size: 32, bold: true, color: navy, gap: 12},
+          {t: "이슈 B", size: 22, bold: true, color: navy, gap: 14},
+          {t: "설명 문구 1", size: 16}]}
+      - {id: c, style: card, x: 8.89, y: 1.95, w: 3.84, h: 3.75, lines: [
+          {t: "03", size: 32, bold: true, color: navy, gap: 12},
+          {t: "이슈 C", size: 22, bold: true, color: navy, gap: 14},
+          {t: "설명 문구 1", size: 16}]}
+      - {id: msg, style: banner, x: 0.60, y: 5.95, w: 12.13, h: 0.70, size: 15, bold: true,
+         text: "결론  ·  핵심 메시지 한 줄"}
+
+  # 장면 2 — 이슈 B 강조(네이비로 색 모핑 + 확대), 나머지 축소
+  - subtitle: "이슈 B 상세"
+    remove: [msg]
+    elements:
+      - {id: a, x: 0.60, y: 1.95, w: 3.30, h: 0.85, anchor: middle,
+         lines: [{t: "01  이슈 A", size: 15, bold: true, color: navy}]}
+      - {id: c, x: 0.60, y: 2.95, w: 3.30, h: 0.85, anchor: middle,
+         lines: [{t: "03  이슈 C", size: 15, bold: true, color: navy}]}
+      - {id: b, style: navycard, x: 4.15, y: 1.95, w: 8.58, h: 4.85, pad: 0.45, lines: [
+          {t: "02", size: 54, bold: true, color: white, gap: 4},
+          {t: "이슈 B", size: 32, bold: true, color: white, gap: 24},
+          {t: "원인  ·  내용", size: 19, color: white, gap: 14},
+          {t: "영향  ·  내용", size: 19, color: white, gap: 14},
+          {t: "대응  ·  내용", size: 19, color: white}]}

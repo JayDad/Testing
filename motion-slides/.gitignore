@@ -1,0 +1,4 @@
+fonts/*.woff2
+__pycache__/
+output/*
+!output/demo_production_methods/
