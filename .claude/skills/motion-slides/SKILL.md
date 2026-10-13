@@ -1,6 +1,6 @@
 ---
 name: motion-slides
-description: 다크블루 테마 애니메이션(모핑) 슬라이드 제작 — 주제·자료·기존 장표를 받아 장면 YAML을 작성하고 모핑 PPTX + 애니메이션 HTML + MP4를 빌드. "모션 슬라이드", "애니메이션 슬라이드", "모핑 장표", "영상 배경 슬라이드", "/motion-slides" 요청 시 사용
+description: 유튜브 배경 모션 영상(키네틱 타이포·3D UI·문서 하이라이트 비트) 및 다크블루 모핑 PPTX 제작 — 주제·자료를 받아 YAML spec 작성 후 HTML·MP4(·PPTX) 빌드. "모션 슬라이드", "애니메이션 슬라이드", "유튜브 배경", "B-roll", "모핑 장표", "/motion-slides" 요청 시 사용
 ---
 
 # Motion Slides — 유튜브 배경 모션(비트) · 모핑 PPTX
