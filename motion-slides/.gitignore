@@ -3,3 +3,4 @@ __pycache__/
 output/*
 !output/demo_production_methods/
 !output/trend_demo/
+!output/ax_intro/

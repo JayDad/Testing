@@ -1,0 +1,47 @@
+# AX 교육 인트로 20초 — 해양에너지사업본부
+# 흐름: 훅(일하는 방식 변화) → 비포/애프터 → 교육 3단계 → 실습 과제 → 엔드카드
+meta:
+  title: "AX 교육 인트로"
+  theme: dark
+  safe_zone: null
+  overlap: 0.3
+  fps: 30
+
+beats:
+  - type: kinetic
+    dur: 3.6
+    eyebrow: "Offshore & Energy · AX 교육"
+    lines: ["보고서·계약·공정 검토", "이제 *AI*와 함께"]
+
+  - type: before_after
+    dur: 4.0
+    transition: slide
+    before_label: "지금 · 수작업 취합과 반복 보고"
+    before_title: "주간 공정·이슈 현황 취합"
+    after_label: "AX 이후"
+    after_text: "AI는 *업무 동료*"
+
+  - type: ui_cards
+    dur: 4.6
+    title: "교육 3단계"
+    focus: 2
+    cards:
+      - {label: "이해", desc: "생성형 AI 원리 · 자료 보안 등급 기준"}
+      - {label: "활용", desc: "문서 요약 · 비교표 · 보고서 초안"}
+      - {label: "*자동화*", desc: "반복 업무를 에이전트로 전환"}
+
+  - type: doc_highlight
+    dur: 4.6
+    source: "AX 교육 · 실습 과제 예시"
+    title: "내 업무로 바로 실습"
+    hl: 1
+    lines:
+      - "Contract 조항 비교표 자동 작성"
+      - "주간 공정 리포트 → 임원 보고 초안 생성"
+      - "Interface 이슈 로그 분류 · 우선순위 지정"
+      - "회의록 → Action Item 자동 추출"
+
+  - type: endcard
+    dur: 3.8
+    title: "*AX*, 오늘부터 시작"
+    sub: "해양에너지사업본부  ·  AX 교육"

@@ -94,11 +94,17 @@
     return t => {
       tl.fromTo(tw, { yPercent: 110 }, { yPercent: 0, duration: .55, ease: 'power3.out', stagger: .07 }, t + .1);
       tl.fromTo(cards, { opacity: 0, z: -600, y: 80, rotateX: 25 }, { opacity: 1, z: 0, y: 0, rotateX: 0, duration: .8, ease: 'power3.out', stagger: .16 }, t + .35);
-      tl.fromTo(row, { rotateY: -16, rotateX: 8 }, { rotateY: -4, rotateX: 4, duration: b.dur, ease: 'sine.inOut' }, t);
-      if (b.focus != null && cards[b.focus]) {
+      const hasFocus = b.focus != null && cards[b.focus];
+      const tf = t + b.dur * .5;
+      tl.fromTo(row, { rotateY: -16, rotateX: 8, x: 0 }, { rotateY: -4, rotateX: 4, duration: hasFocus ? tf - t : b.dur, ease: 'sine.inOut' }, t);
+      if (hasFocus) {
+        const fc = cards[b.focus];
         const others = cards.filter((_, i) => i !== b.focus);
-        tl.to(others, { opacity: .28, filter: 'blur(3px)', duration: .5, ease: 'power2.out' }, t + b.dur * .55);
-        tl.to(cards[b.focus], { scale: 1.08, z: 80, borderColor: 'rgba(124,224,255,.95)', boxShadow: '0 0 80px rgba(76,141,255,.55)', duration: .5, ease: 'power2.out' }, t + b.dur * .55);
+        // 포커스 카드를 화면 중앙으로 패닝 + 정면 회전 (카메라가 카드를 따라가는 연출)
+        tl.to(row, { x: () => (row.offsetLeft + row.offsetWidth / 2) - (fc.offsetLeft + fc.offsetWidth / 2),
+                     rotateY: 0, rotateX: 0, duration: .8, ease: 'power3.inOut' }, tf);
+        tl.to(others, { opacity: .28, filter: 'blur(3px)', duration: .5, ease: 'power2.out' }, tf + .1);
+        tl.to(fc, { scale: 1.12, z: 0, borderColor: 'rgba(124,224,255,.95)', boxShadow: '0 0 80px rgba(76,141,255,.55)', duration: .6, ease: 'power2.out' }, tf + .2);
       }
     };
   };
