@@ -47,6 +47,21 @@ def qa_mp4(mp4, qa_dir, duration):
     print(f"  [QA] 콘택트시트 → {qa_dir / 'contact_sheet.png'}")
 
 
+def build_beats(spec, out, a, qa_dir):
+    """비트 엔진(유튜브 배경 트렌드형) — HTML + MP4"""
+    import beats as bt
+    meta, beats = bt.load(spec)
+    print(f"▶ {spec.name}: 비트 {len(beats)}개 (트렌드형 · GSAP) → {out}")
+    h = bt.build_html(meta, beats, out / "motion.html")
+    print(f"  ✔ HTML 미리보기  {h}")
+    t0 = time.time()
+    fps = a.fps or int(meta["fps"])
+    m, n = ms.render_mp4(h, out / "motion.mp4", None, fps=fps)
+    print(f"  ✔ MP4  {m}  ({n}프레임 · {n / fps:.1f}초, {time.time() - t0:.0f}초 소요)")
+    if a.qa:
+        qa_mp4(Path(m), qa_dir, n / fps)
+
+
 def main():
     ap = argparse.ArgumentParser(description="Scene YAML → 모핑 PPTX / 애니메이션 HTML / MP4")
     ap.add_argument("spec", nargs="?")
@@ -72,13 +87,17 @@ def main():
     targets = {t.strip() for t in a.only.split(",")}
     out = Path(a.out) if a.out else Path(__file__).resolve().parent / "output" / spec.stem
     out.mkdir(parents=True, exist_ok=True)
-    meta, scenes = ms.load_spec(spec)
-    fps = a.fps or int(meta["fps"])
-    print(f"▶ {spec.name}: 장면 {len(scenes)}개 → {out}")
-
     qa_dir = out / "qa"
     if a.qa:
         qa_dir.mkdir(exist_ok=True)
+
+    import yaml
+    if "beats" in (yaml.safe_load(spec.read_text(encoding="utf-8")) or {}):
+        return build_beats(spec, out, a, qa_dir)
+
+    meta, scenes = ms.load_spec(spec)
+    fps = a.fps or int(meta["fps"])
+    print(f"▶ {spec.name}: 장면 {len(scenes)}개 → {out}")
 
     if "pptx" in targets:
         p = ms.build_pptx(meta, scenes, out / "deck.pptx")

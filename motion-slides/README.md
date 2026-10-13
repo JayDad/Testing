@@ -1,4 +1,28 @@
-# Motion Slides — 장면 YAML 1개로 모핑 PPTX · 애니메이션 MP4 동시 제작
+# Motion Slides — YAML 1개로 유튜브 배경 모션(MP4)·모핑 PPTX 제작
+
+## 엔진 2종 (spec에 `beats:` 있으면 비트 엔진 자동 선택)
+
+| 엔진 | spec 키 | 산출물 | 용도 |
+|---|---|---|---|
+| **비트(Beat) 엔진 — 유튜브 트렌드형 (기본 권장)** | `beats:` | HTML(GSAP) · MP4 | 유튜브 배경·B-roll, 다크 그라디언트 + 키네틱 타이포 + 3D UI + 문서 하이라이트 |
+| 장면(Scene) 엔진 — 보고용 | `scenes:` | 모핑 PPTX · HTML · MP4 | 사내 보고 장표 모핑, PowerPoint 재편집 필요 시 |
+
+### 비트 유형 (`specs/trend_demo.yaml`)
+
+| type | 연출 | 주요 키 |
+|---|---|---|
+| `kinetic` | 단어 단위 스탬프 등장, `*강조*` 단어 시안 + 밑줄 드로잉 | `eyebrow` `lines` `size` |
+| `stat` | 숫자 카운트업 + 진행 바 | `value` `suffix` `label` `bar` `caption` |
+| `ui_cards` | 글래스 카드 3D 비행 진입, 카메라 궤도 이동, 포커스 카드 강조 | `title` `cards[{label,desc}]` `focus` |
+| `doc_highlight` | 문서 카드 등장 → 형광펜 스윕 → 해당 문장으로 카메라 줌 | `source` `title` `lines` `hl` |
+| `before_after` | 보고용 장표(BEFORE) → 수직 와이프 → 키네틱(AFTER) | `before_title` `after_text` |
+| `endcard` | 마스크 상승 제목 + 라인 드로잉 | `title` `sub` |
+
+- 비트 간 전환: `transition: zoom`(기본, 줌 스루) · `slide` · `cut`
+- `meta.safe_zone: right|left` → 발표자 PIP 자리 비움
+- 배경 글로우·그리드는 전 구간 연속 이동(정지 화면 방지), 렌더링 20초 영상 기준 약 2분
+
+---
 
 ## Executive Summary
 

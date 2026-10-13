@@ -431,37 +431,41 @@ else{
 # ③ MP4 (headless Chromium 프레임 캡처 → FFmpeg)
 # ---------------------------------------------------------------------------
 
-def render_mp4(html_path, out_path, duration, fps=30, crf=18):
+def _launch(pw):
+    """Chromium 실행 — MOTION_CHROMIUM 환경변수 → Playwright 기본 → 사전 설치본 순"""
+    err = None
+    for exe in [os.environ.get("MOTION_CHROMIUM"), None, "/opt/pw-browsers/chromium"]:
+        if exe is not None and not (exe and Path(exe).exists()):
+            continue
+        try:
+            return pw.chromium.launch(**({"executable_path": exe} if exe else {}))
+        except Exception as e:  # 버전 불일치 등 → 다음 후보
+            err = e
+    raise RuntimeError(f"Chromium 실행 실패 — setup.sh 확인 필요\n{err}")
+
+
+def render_mp4(html_path, out_path, duration=None, fps=30, crf=18):
+    """duration 미지정 시 페이지의 window.__duration 사용 (비트 엔진)"""
     from playwright.sync_api import sync_playwright
 
     ffmpeg = shutil.which("ffmpeg") or "ffmpeg"
-    frames = int(round(duration * fps))
     cmd = [ffmpeg, "-y", "-loglevel", "error", "-f", "image2pipe", "-framerate", str(fps),
            "-i", "-", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", str(crf),
            "-preset", "medium", "-movflags", "+faststart", str(out_path)]
     with sync_playwright() as pw:
-        # 우선순위: MOTION_CHROMIUM 환경변수 → Playwright 기본 → 사전 설치 Chromium
-        candidates = [os.environ.get("MOTION_CHROMIUM"), None, "/opt/pw-browsers/chromium"]
-        browser, err = None, None
-        for exe in candidates:
-            if exe is not None and not (exe and Path(exe).exists()):
-                continue
-            try:
-                browser = pw.chromium.launch(**({"executable_path": exe} if exe else {}))
-                break
-            except Exception as e:  # 버전 불일치 등 → 다음 후보
-                err = e
-        if browser is None:
-            raise RuntimeError(f"Chromium 실행 실패 — setup.sh 확인 필요\n{err}")
+        browser = _launch(pw)
         page = browser.new_page(viewport={"width": 1920, "height": 1080})
         page.goto(Path(html_path).resolve().as_uri() + "?capture")
         page.evaluate("document.fonts.ready")
-        stage = page.locator("#stage")
+        if duration is None:
+            duration = float(page.evaluate("window.__duration"))
+        frames = int(round(duration * fps))
         proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
         try:
             for f in range(frames):
                 page.evaluate(f"window.__seek({f / fps})")
-                proc.stdin.write(stage.screenshot(type="png"))
+                # JPEG(q95) 파이프 — PNG 대비 프레임당 캡처 시간 최대 1/6
+                proc.stdin.write(page.screenshot(type="jpeg", quality=95))
         finally:
             proc.stdin.close()
             proc.wait()

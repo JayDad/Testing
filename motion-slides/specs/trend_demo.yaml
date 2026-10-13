@@ -1,0 +1,55 @@
+# 트렌드형 테스트 — 유튜브 배경 모션(비트) 6종
+# 비트 = 한 화면 한 메시지, 3~4초, 내부에서 1초 내외 간격으로 시각 변화
+meta:
+  title: "YouTube Motion Trend Test"
+  theme: dark
+  safe_zone: null       # right | left → 발표자 PIP 자리 비움
+  overlap: 0.3          # 전환 겹침(초)
+  fps: 30
+
+beats:
+  - type: kinetic
+    dur: 3.4
+    eyebrow: "2026 YouTube Motion"
+    lines: ["배경 슬라이드는", "*장표*가 아니라 *비트*"]
+
+  - type: before_after
+    dur: 3.6
+    transition: slide
+    before_label: "BEFORE · 보고용 장표 + 모핑"
+    before_title: "배경 애니메이션 슬라이드 제작 방식"
+    after_label: "AFTER · 한 화면 한 메시지"
+    after_text: "텍스트가 *주인공*"
+
+  - type: stat
+    dur: 3.2
+    value: 8
+    suffix: "단어"
+    label: "카드당 최대 단어 수"
+    bar: 0.8
+    caption: "런치 비디오 제작 스킬 가이드 기준"
+
+  - type: ui_cards
+    dur: 4.2
+    title: "트렌드 3대 축"
+    focus: 0
+    cards:
+      - {label: "키네틱 *타이포*", desc: "단어 단위 등장 · 강조색은 핵심 단어만"}
+      - {label: "3D UI 모션", desc: "글래스 카드 · 멈추지 않는 카메라"}
+      - {label: "문서·데이터", desc: "형광펜 하이라이트 · 숫자 카운트업"}
+
+  - type: doc_highlight
+    dur: 4.2
+    source: "Motion Trend Memo · 2026.10"
+    title: "제작 원칙 4가지"
+    hl: 1
+    lines:
+      - "핵심 단어만 강조색, 나머지는 절제"
+      - "전환은 페이드 대신 줌·와이프 같은 공간 이동"
+      - "카메라는 멈추지 않고 미세하게 계속 이동"
+      - "시각 변화 주기 3~5초, 카드당 8단어 이하"
+
+  - type: endcard
+    dur: 3.2
+    title: "장면 = *비트*"
+    sub: "YAML 1개 → MP4  ·  Claude Code 워크플로우"

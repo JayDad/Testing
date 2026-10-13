@@ -3,7 +3,14 @@ name: motion-slides
 description: 다크블루 테마 애니메이션(모핑) 슬라이드 제작 — 주제·자료·기존 장표를 받아 장면 YAML을 작성하고 모핑 PPTX + 애니메이션 HTML + MP4를 빌드. "모션 슬라이드", "애니메이션 슬라이드", "모핑 장표", "영상 배경 슬라이드", "/motion-slides" 요청 시 사용
 ---
 
-# Motion Slides — 장면 YAML → 모핑 PPTX · HTML · MP4
+# Motion Slides — 유튜브 배경 모션(비트) · 모핑 PPTX
+
+## 엔진 선택 (먼저 판단)
+- 유튜브 배경·B-roll·SNS 영상 → **비트 엔진** (`beats:` spec, 예시 `motion-slides/specs/trend_demo.yaml`) — 기본값
+- 사내 보고 장표에 모핑만 필요, PowerPoint 재편집 필요 → 장면 엔진 (`scenes:` spec)
+- 비트 작성 원칙: 비트당 1메시지·8단어 이하·3~4초, 강조는 `*핵심 단어*`만, 비트 유형을 연속 반복하지 않음(시각 변화 유지)
+- 비트 유형: kinetic · stat · ui_cards · doc_highlight · before_after · endcard (키는 `motion-slides/README.md` 표 참고)
+- 새 비트 유형 필요 시 `motion-slides/beats_runtime.js`의 `B.<type>`에 GSAP 함수 추가
 
 엔진: `motion-slides/` (repo 루트 기준). 상세 문법은 `motion-slides/specs/_template.yaml` 상단 주석, 완성 예시는 `motion-slides/specs/demo_production_methods.yaml` 참고
 
